@@ -1,30 +1,31 @@
- // Define regex pattern to match <Image> tags and content
-        
-        String regex = "<Image>.*?</Image>";
-        
-        // Compile the regex pattern
+//efsnf
+
+
+
+        // Regular expression to match <image> tags and their content
+        List<String> sections = new ArrayList<>();
+        String regex = "<image.*?>.*?</image>";
         Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
         Matcher matcher = pattern.matcher(input);
         
-        // List to hold the result sections
-        List<String> results = new ArrayList<>();
-        
-        // Track the start position of the last match
         int lastIndex = 0;
-
-        // Extract and store sections based on <Image> tags
+        
+        // Extract sections before, between, and after <image> tags
         while (matcher.find()) {
-            // Append section before the current <Image> tag
-            if (lastIndex < matcher.start()) {
-                results.add(input.substring(lastIndex, matcher.start()));
+            // Add section before the current <image> tag
+            if (matcher.start() > lastIndex) {
+                sections.add(input.substring(lastIndex, matcher.start()));
             }
-            // Append the current <Image> tag and its content
-            results.add(matcher.group());
-            // Update the last index to the end of the current <Image> tag
+
+            // Add section containing the current <image> tag
+            sections.add(matcher.group());
+
             lastIndex = matcher.end();
         }
-        
-        // Append the remaining part of the string after the last <Image> tag
+
+        // Add section after the last <image> tag
         if (lastIndex < input.length()) {
-            results.add(input.substring(lastIndex));
+            sections.add(input.substring(lastIndex));
         }
+        
+        return sections;
