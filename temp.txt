@@ -123,3 +123,19 @@ public class HtmlToPdfConverter {
             }
         }
     }
+
+
+private static TextState copyTextState(TextState original) {
+        TextState copy = new TextState();
+        copy.setFont(original.getFont());
+        copy.setFontSize(original.getFontSize());
+        copy.setForegroundColor(original.getForegroundColor());
+        copy.setBackgroundColor(original.getBackgroundColor());
+        copy.setFontStyle(original.getFontStyle());
+        copy.setUnderline(original.isUnderline());
+        copy.setStrikeOut(original.isStrikeOut());
+        copy.setSubscript(original.isSubscript());
+        copy.setSuperscript(original.isSuperscript());
+        copy.setLineSpacing(original.getLineSpacing());
+        return copy;
+    }
