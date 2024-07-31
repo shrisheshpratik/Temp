@@ -1,6 +1,6 @@
  // Define regex pattern to match <Image> tags and content
         
-        String regex = "(.*?<Image>.*?</Image>)|(<Image>.*?</Image>)";
+        String regex = "(<Image>.*?</Image>)|(<[^>]+>.*?</[^>]+>)";
 
         // Compile the regex pattern
         Pattern pattern = Pattern.compile(regex, Pattern.DOTALL);
