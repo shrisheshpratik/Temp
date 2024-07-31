@@ -5,7 +5,10 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.Base64;
 
 public class HtmlToPdfConverter {
@@ -14,59 +17,58 @@ public class HtmlToPdfConverter {
         // Parse HTML content with JSoup
         Document htmlDoc = Jsoup.parse(htmlContent);
         TextFragment textFragment = new TextFragment();
-        parseElement(pdfDocument, htmlDoc.body(), textFragment);
+        parseElement(pdfDocument, htmlDoc.body(), textFragment, new TextState());
         cell.getParagraphs().add(textFragment);
     }
 
-    private static void parseElement(com.aspose.pdf.Document pdfDocument, Element element, TextFragment textFragment) {
+    private static void parseElement(com.aspose.pdf.Document pdfDocument, Element element, TextFragment textFragment, TextState parentState) {
         for (Node node : element.childNodes()) {
             if (node instanceof TextNode) {
                 TextSegment segment = new TextSegment(((TextNode) node).text().replace("&nbsp;", " "));
+                segment.setTextState(parentState.clone()); // Clone the parent state to maintain styles
                 textFragment.getSegments().add(segment);
             } else if (node instanceof Element) {
                 Element el = (Element) node;
+                TextState currentState = parentState.clone(); // Start with the parent state and modify as needed
                 switch (el.tagName()) {
                     case "p":
-                        parseElement(pdfDocument, el, textFragment);
+                        parseElement(pdfDocument, el, textFragment, currentState);
                         textFragment.getSegments().add(new TextSegment("\n"));
                         break;
                     case "strong":
-                        TextSegment boldSegment = new TextSegment(el.text());
-                        boldSegment.getTextState().setFontStyle(FontStyles.Bold);
-                        textFragment.getSegments().add(boldSegment);
+                        currentState.setFontStyle(FontStyles.Bold);
+                        parseElement(pdfDocument, el, textFragment, currentState);
                         break;
                     case "u":
-                        TextSegment underlineSegment = new TextSegment(el.text());
-                        underlineSegment.getTextState().setUnderline(true);
-                        textFragment.getSegments().add(underlineSegment);
+                        currentState.setUnderline(true);
+                        parseElement(pdfDocument, el, textFragment, currentState);
                         break;
                     case "i":
-                        TextSegment italicSegment = new TextSegment(el.text());
-                        italicSegment.getTextState().setFontStyle(FontStyles.Italic);
-                        textFragment.getSegments().add(italicSegment);
+                        currentState.setFontStyle(FontStyles.Italic);
+                        parseElement(pdfDocument, el, textFragment, currentState);
                         break;
                     case "ul":
-                        parseList(pdfDocument, el, textFragment, false);
+                        parseList(pdfDocument, el, textFragment, currentState, false);
                         break;
                     case "ol":
-                        parseList(pdfDocument, el, textFragment, true);
+                        parseList(pdfDocument, el, textFragment, currentState, true);
                         break;
                     case "li":
                         textFragment.getSegments().add(new TextSegment("\n• ")); // bullet point for unordered list
-                        parseElement(pdfDocument, el, textFragment);
+                        parseElement(pdfDocument, el, textFragment, currentState);
                         break;
                     case "img":
                         String src = el.attr("src");
                         addBase64ImageToPdf(pdfDocument, src, textFragment);
                         break;
                     default:
-                        parseElement(pdfDocument, el, textFragment);
+                        parseElement(pdfDocument, el, textFragment, currentState);
                 }
             }
         }
     }
 
-    private static void parseList(com.aspose.pdf.Document pdfDocument, Element element, TextFragment textFragment, boolean isOrdered) {
+    private static void parseList(com.aspose.pdf.Document pdfDocument, Element element, TextFragment textFragment, TextState parentState, boolean isOrdered) {
         int counter = 1;
         for (Element item : element.children()) {
             if (item.tagName().equals("li")) {
@@ -76,7 +78,7 @@ public class HtmlToPdfConverter {
                 } else {
                     textFragment.getSegments().add(new TextSegment("\n• "));
                 }
-                parseElement(pdfDocument, item, textFragment);
+                parseElement(pdfDocument, item, textFragment, parentState);
             }
         }
     }
@@ -90,32 +92,34 @@ public class HtmlToPdfConverter {
             // Create an image stream
             ByteArrayInputStream imageStream = new ByteArrayInputStream(imageBytes);
 
-            // Add the image to the document
-            Image image = new Image();
-            image.setImageStream(imageStream);
+            try {
+                // Read the image to get its dimensions
+                BufferedImage bufferedImage = ImageIO.read(imageStream);
+                double aspectRatio = (double) bufferedImage.getWidth() / bufferedImage.getHeight();
 
-            // You might need to add the image to the PDF document before adding it to the text fragment
-            Page page = pdfDocument.getPages().get_Item(1); // Assuming adding to the first page, adjust as needed
-            page.getParagraphs().add(image);
+                // Reset the image stream for Aspose PDF
+                imageStream.reset();
 
-            // Add a placeholder for the image in the text fragment
-            textFragment.getSegments().add(new TextSegment("[Image]"));
+                // Create the image object
+                Image image = new Image();
+                image.setImageStream(imageStream);
+
+                // Calculate the size maintaining the aspect ratio
+                double width = 100; // Default width, you can adjust as needed
+                double height = width / aspectRatio;
+
+                // Set image size
+                image.setFixWidth(width);
+                image.setFixHeight(height);
+
+                // Add the image to the document
+                Page page = pdfDocument.getPages().get_Item(1); // Assuming adding to the first page, adjust as needed
+                page.getParagraphs().add(image);
+
+                // Add a placeholder for the image in the text fragment
+                textFragment.getSegments().add(new TextSegment("[Image]"));
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
-
-    public static void main(String[] args) {
-        com.aspose.pdf.Document pdfDocument = new com.aspose.pdf.Document();
-        Page page = pdfDocument.getPages().add();
-
-        // Create a table and add it to the page
-        Table table = new Table();
-        page.getParagraphs().add(table);
-
-        // Add a row to the table
-        Row row = table.getRows().add();
-
-        // Add a cell to the row
-        Cell cell = row.getCells().add();
-
-        // HTML content to be added to the cell
-        String htmlContent = "<p>This is a <strong>bold</strong>, <u>under
