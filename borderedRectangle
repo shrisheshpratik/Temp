@@ -1,26 +1,34 @@
-public static void addRoundedRectangleBorderAroundTable(Document document, int tableIndex) {
-        for (Page page : document.getPages()) {
-            TableAbsorber absorber = new TableAbsorber();
-            absorber.visit(page);
+public static void addRoundedRectangleBorderAroundTable(Document document, String tableMarker) {
+        TextFragmentAbsorber absorber = new TextFragmentAbsorber(tableMarker);
+        document.getPages().accept(absorber);
 
-            if (tableIndex <= absorber.getTableList().size()) {
-                AbsorbedTable absorbedTable = absorber.getTableList().get(tableIndex - 1);
-                Rectangle rect = absorbedTable.getRectangle();
+        for (TextFragment marker : absorber.getTextFragments()) {
+            Page page = marker.getPage();
+            TableAbsorber tableAbsorber = new TableAbsorber();
+            tableAbsorber.visit(page);
 
-                double margin = 5; // Add some margin around the table
-                double borderWidth = rect.getWidth() + margin * 2;
-                double borderHeight = rect.getHeight() + margin * 2;
-                double borderX = rect.getLLX() - margin;
-                double borderY = rect.getLLY() - margin;
-                double cornerRadius = 10;
+            for (AbsorbedTable absorbedTable : tableAbsorber.getTableList()) {
+                // Find the table that follows the marker
+                Rectangle markerRect = marker.getRectangle();
+                Rectangle tableRect = absorbedTable.getRectangle();
 
-                Graph canvas = new Graph(page.getPageInfo().getWidth(), page.getPageInfo().getHeight());
-                Rectangle roundedRect = new Rectangle(borderX, borderY, borderWidth, borderHeight);
-                roundedRect.setRounded(true);
-                roundedRect.setCornerRadius(cornerRadius);
+                if (tableRect.getLLY() < markerRect.getLLY() && tableRect.getURY() > markerRect.getLLY()) {
+                    double margin = 5; // Add some margin around the table
+                    double borderWidth = tableRect.getWidth() + margin * 2;
+                    double borderHeight = tableRect.getHeight() + margin * 2;
+                    double borderX = tableRect.getLLX() - margin;
+                    double borderY = tableRect.getLLY() - margin;
+                    double cornerRadius = 10;
 
-                canvas.getShapes().add(roundedRect);
-                page.getParagraphs().add(canvas);
+                    Graph canvas = new Graph(page.getPageInfo().getWidth(), page.getPageInfo().getHeight());
+                    Rectangle roundedRect = new Rectangle(borderX, borderY, borderWidth, borderHeight);
+                    roundedRect.setRounded(true);
+                    roundedRect.setCornerRadius(cornerRadius);
+
+                    canvas.getShapes().add(roundedRect);
+                    page.getParagraphs().add(canvas);
+                    break; // Found the table, break the loop
+                }
             }
         }
     }
