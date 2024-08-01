@@ -1,32 +1,26 @@
-public static void addRoundedRectangleBorderAroundTable(Document document, String tableId) {
+public static void addRoundedRectangleBorderAroundTable(Document document, int tableIndex) {
         for (Page page : document.getPages()) {
             TableAbsorber absorber = new TableAbsorber();
             absorber.visit(page);
 
-            for (AbsorbedTable absorbedTable : absorber.getTableList()) {
-                Table table = absorbedTable.getTable();
+            if (tableIndex <= absorber.getTableList().size()) {
+                AbsorbedTable absorbedTable = absorber.getTableList().get(tableIndex - 1);
+                Rectangle rect = absorbedTable.getRectangle();
 
-                // Check if the table has the specific ID
-                if (tableId.equals(table.getId())) {
-                    Rectangle rect = absorbedTable.getRectangle();
+                double margin = 5; // Add some margin around the table
+                double borderWidth = rect.getWidth() + margin * 2;
+                double borderHeight = rect.getHeight() + margin * 2;
+                double borderX = rect.getLLX() - margin;
+                double borderY = rect.getLLY() - margin;
+                double cornerRadius = 10;
 
-                    double margin = 5; // Add some margin around the table
-                    double borderWidth = rect.getWidth() + margin * 2;
-                    double borderHeight = rect.getHeight() + margin * 2;
-                    double borderX = rect.getLLX() - margin;
-                    double borderY = rect.getLLY() - margin;
-                    double cornerRadius = 10;
+                Graph canvas = new Graph(page.getPageInfo().getWidth(), page.getPageInfo().getHeight());
+                Rectangle roundedRect = new Rectangle(borderX, borderY, borderWidth, borderHeight);
+                roundedRect.setRounded(true);
+                roundedRect.setCornerRadius(cornerRadius);
 
-                    Graph canvas = new Graph(borderWidth, borderHeight);
-                    canvas.setCoordinateOrigin(borderX, borderY);
-
-                    Rectangle roundedRect = new Rectangle(0, 0, borderWidth, borderHeight);
-                    roundedRect.setRounded(true);
-                    roundedRect.setCornerRadius(cornerRadius);
-
-                    canvas.getShapes().add(roundedRect);
-                    page.getParagraphs().add(canvas);
-                }
+                canvas.getShapes().add(roundedRect);
+                page.getParagraphs().add(canvas);
             }
         }
     }
